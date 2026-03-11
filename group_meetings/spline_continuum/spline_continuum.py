@@ -8,21 +8,14 @@ Created on Sat Feb  7 12:21:06 2026
 import numpy as np
 from scipy.interpolate import make_splrep
 
-import matplotlib.pyplot as plt
-
-# to do for perfect bethany implementation:
-# investigate bumps (bumps == True means LS)
-
-# anchor points version
-
 # input:
 # need a col with the anchor point wavelengths, the anchor point method, and lower/upper wave for specific method
+# what each method does: 
 # 0: y val for the x val
 # 1: a small median, 2 points on either side (5 tot)
 # 2: a big median, 10 points on either side (21 tot)
 # 3: fit to line, by finding slope of lower and upper wave line and taking y from this
 # 4: fit to flat line, by finding mean of lower and upper wave as y
-
 
 '''
 general approach:
@@ -70,7 +63,7 @@ HELPER FUNCTIONS
 
 
 # short function to convert wavelengths to indices
-def wave_to_ind(wavelengths, x):
+def _wave_to_ind(wavelengths, x):
     ind = np.zeros(x.shape).astype(np.int64)
     for i, wave in enumerate(x):
         ind[i] = np.argmin(abs(wavelengths - wave))
@@ -78,7 +71,7 @@ def wave_to_ind(wavelengths, x):
 
 
 
-def anchor_point(
+def _anchor_point(
         data, 
         ap_ind, 
         ap_method=None, 
@@ -162,6 +155,12 @@ def anchor_point(
 
 
 
+'''
+MAIN FUNCTION
+'''
+
+
+
 def spline_from_anchor_points(
         wavelengths, 
         data, 
@@ -205,12 +204,12 @@ def spline_from_anchor_points(
     data_nonan[np.isnan(data_nonan)] = 0
     
     # convert ap_x to ap_ind
-    ap_ind = wave_to_ind(wavelengths, ap_x)
+    ap_ind = _wave_to_ind(wavelengths, ap_x)
     
     # need both ap_lb and ap_ub to not be None for their routines to function
     if ap_lb is not None and ap_ub is not None:
-        ap_lb_ind = wave_to_ind(wavelengths, ap_lb)
-        ap_ub_ind = wave_to_ind(wavelengths, ap_ub)
+        ap_lb_ind = _wave_to_ind(wavelengths, ap_lb)
+        ap_ub_ind = _wave_to_ind(wavelengths, ap_ub)
     else:
         ap_lb_ind = [None]*M
         ap_ub_ind = [None]*M
@@ -227,7 +226,7 @@ def spline_from_anchor_points(
     ap_y = np.zeros((M, shape_y, shape_x))
     # each input is a list/ndarray of the same length
     for w, ind in enumerate(ap_ind):
-        ap_y[w] = anchor_point(
+        ap_y[w] = _anchor_point(
             data_nonan, 
             ind, 
             ap_method=ap_method[w], 
@@ -239,28 +238,4 @@ def spline_from_anchor_points(
     # calculate BSpline instance
     spl_func = make_splrep(ap_x, ap_y)
     spl = spl_func(wavelengths)
-    return spl_func
-
-
-
-'''
-TESTING
-'''
-
-
-# # inputs
-# x = np.arange(1, 10, 0.1)
-# y = np.sin(x)
-# y = y[:, np.newaxis, np.newaxis]*np.ones(x.shape + (3, 5))
-# ext = 2 
-
-# ap_x = np.array([1, 2, 4, 6, 8, 9])
-# ap_method = np.array([0, 1, 2, 1, 1, 5])
-# ap_lb = np.array([0, 0, 0, 5.5, 7.5, 0])
-# ap_ub = np.array([0, 0, 0, 6.5, 8.5, 0])
-
-# spl = spline_from_anchor_points(x, y, ap_x, ap_method, ext, ap_lb, ap_ub)
-
-# plt.figure()
-# plt.plot(x, y[:, 2, 2])
-# plt.plot(x, spl[:, 2, 2])
+    return spl, spl_func
